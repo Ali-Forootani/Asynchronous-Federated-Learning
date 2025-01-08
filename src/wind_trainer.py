@@ -3453,8 +3453,234 @@ async def federated_learning_with_balanced_client_selection_and_delay_tracking_4
     return server_model, training_losses, selected_clients_by_round, execution_times_by_round
 
 
+##########################################################
+##########################################################
 
 
+async def federated_learning_with_balanced_client_selection_and_delay_tracking_5(
+    clients_models, server_model,
+    clients_train_loaders, clients_test_loaders,
+    num_rounds=1, local_epochs=5,
+    min_clients_per_round=1, max_clients_per_round=3,
+    aggregation_method='weighted_average',
+    loss_fn=None, lr=1e-5, gamma=0.01, alpha=0.001,
+    accumulation_steps=1, early_stopping_patience=3,
+    save_dir='models/'
+):
+    import torch.nn.functional as F
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    server_optimizer = torch.optim.Adam(server_model.parameters(), lr=lr)
+    server_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(server_optimizer, T_max=num_rounds)
+    
+    training_losses = [[] for _ in range(len(clients_models))]  # Initialize losses for all clients
+    server_losses_per_round = []  # Track global server model losses (weighted average of client losses)
+
+    selected_clients_by_round = []
+    execution_times_by_round = []
+
+    all_clients = set(range(len(clients_models)))
+    remaining_clients = all_clients.copy()
+
+    for round_num in tqdm(range(num_rounds), desc="Federated Rounds"):
+        print(f"\nStarting federated learning round {round_num + 1}/{num_rounds}")
+
+        # Select clients
+        num_clients_per_round = random.randint(min_clients_per_round, max_clients_per_round)
+        if len(remaining_clients) < num_clients_per_round:
+            selected_clients = list(remaining_clients)
+            remaining_clients = all_clients - set(selected_clients)
+            additional_clients = random.sample(remaining_clients, num_clients_per_round - len(selected_clients))
+            selected_clients.extend(additional_clients)
+        else:
+            selected_clients = random.sample(remaining_clients, num_clients_per_round)
+        remaining_clients -= set(selected_clients)
+
+        selected_clients_by_round.append(selected_clients)
+        print(f"Selected clients for round {round_num + 1}: {selected_clients}")
+
+        client_weights = []
+        client_losses_per_round = []  # Track the losses of selected clients in this round
+        server_state_dict = server_model.state_dict()
+
+        # Load server weights into each selected client model
+        for i in selected_clients:
+            clients_models[i].load_state_dict(server_state_dict)
+
+        # Train each selected client asynchronously and track execution times
+        async def train_client_task(i):
+            result, client_losses, execution_time = await train_random_clients_with_strong_convexity_time_delay_3(
+                clients_models[i], clients_train_loaders[i], device,
+                local_epochs, loss_fn, gamma, alpha,
+                delay_t=0,
+                accumulation_steps=accumulation_steps, early_stopping_patience=early_stopping_patience
+            )
+            return result, client_losses, execution_time
+
+        tasks = [train_client_task(i) for i in selected_clients]
+        results = await asyncio.gather(*tasks)
+
+        execution_times = [execution_time for _, _, execution_time in results]
+        execution_times_by_round.append(execution_times)
+
+        max_delay = max(execution_times) - min(execution_times)
+        print(f"Round {round_num + 1} - Maximum delay: {max_delay:.2f}s")
+
+        total_samples = 0
+        total_weighted_loss = 0
+
+        for i, (state_dict, client_loss, _) in zip(selected_clients, results):
+            client_weights.append(state_dict)
+            training_losses[i].extend(client_loss)
+            client_dataset_size = len(clients_train_loaders[i].dataset)
+            total_samples += client_dataset_size
+            total_weighted_loss += client_dataset_size * np.mean(client_loss)
+
+        for i in set(range(len(clients_models))) - set(selected_clients):
+            training_losses[i].append(None)
+
+        # Aggregate weights
+        if aggregation_method == 'weighted_average':
+            new_server_state_dict = {key: torch.zeros_like(value) for key, value in client_weights[0].items()}
+
+            for key in new_server_state_dict:
+                for i, client_weight in zip(selected_clients, client_weights):
+                    weight_factor = len(clients_train_loaders[i].dataset) / total_samples
+                    new_server_state_dict[key] += client_weight[key] * weight_factor
+
+        server_model.load_state_dict(new_server_state_dict)
+        server_scheduler.step()
+        save_all_models(clients_models, server_model, round_num, save_dir)
+
+        # Compute weighted average server loss (from clients' losses)
+        weighted_server_loss = total_weighted_loss / total_samples if total_samples > 0 else None
+        server_losses_per_round.append(weighted_server_loss)
+        print(f"Server Loss (Weighted Average of Clients' Losses) - Round {round_num + 1}: {weighted_server_loss:.4f}")
+
+    # Save server model losses as a numpy array
+    np.save(f"{save_dir}/server_model_losses.npy", np.array(server_losses_per_round))
+
+    return server_model, training_losses, selected_clients_by_round, execution_times_by_round, server_losses_per_round
+
+
+
+##########################################################
+##########################################################
+
+"""
+
+async def federated_learning_with_balanced_client_selection_and_delay_tracking_5(
+    clients_models, server_model,
+    clients_train_loaders, clients_test_loaders,
+    num_rounds=1, local_epochs=5,
+    min_clients_per_round=1, max_clients_per_round=3,
+    aggregation_method='weighted_average',
+    loss_fn=None, lr=1e-5, gamma=0.01, alpha=0.001,
+    accumulation_steps=1, early_stopping_patience=3,
+    save_dir='models/'
+):
+    import torch.nn.functional as F
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    server_optimizer = torch.optim.Adam(server_model.parameters(), lr=lr)
+    server_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(server_optimizer, T_max=num_rounds)
+    
+    training_losses = [[] for _ in range(len(clients_models))]  # Initialize losses for all clients
+    server_losses_per_round = []  # Track global server model losses
+
+    selected_clients_by_round = []
+    execution_times_by_round = []
+
+    all_clients = set(range(len(clients_models)))
+    remaining_clients = all_clients.copy()
+
+    for round_num in tqdm(range(num_rounds), desc="Federated Rounds"):
+        print(f"\nStarting federated learning round {round_num + 1}/{num_rounds}")
+
+        # Select clients
+        num_clients_per_round = random.randint(min_clients_per_round, max_clients_per_round)
+        if len(remaining_clients) < num_clients_per_round:
+            selected_clients = list(remaining_clients)
+            remaining_clients = all_clients - set(selected_clients)
+            additional_clients = random.sample(remaining_clients, num_clients_per_round - len(selected_clients))
+            selected_clients.extend(additional_clients)
+        else:
+            selected_clients = random.sample(remaining_clients, num_clients_per_round)
+        remaining_clients -= set(selected_clients)
+
+        selected_clients_by_round.append(selected_clients)
+        print(f"Selected clients for round {round_num + 1}: {selected_clients}")
+
+        client_weights = []
+        server_state_dict = server_model.state_dict()
+
+        # Load server weights into each selected client model
+        for i in selected_clients:
+            clients_models[i].load_state_dict(server_state_dict)
+
+        # Train each selected client asynchronously and track execution times
+        async def train_client_task(i):
+            result, client_losses, execution_time = await train_random_clients_with_strong_convexity_time_delay_3(
+                clients_models[i], clients_train_loaders[i], device,
+                local_epochs, loss_fn, gamma, alpha,
+                delay_t=0,
+                accumulation_steps=accumulation_steps, early_stopping_patience=early_stopping_patience
+            )
+            return result, client_losses, execution_time
+
+        tasks = [train_client_task(i) for i in selected_clients]
+        results = await asyncio.gather(*tasks)
+
+        execution_times = [execution_time for _, _, execution_time in results]
+        execution_times_by_round.append(execution_times)
+
+        max_delay = max(execution_times) - min(execution_times)
+        print(f"Round {round_num + 1} - Maximum delay: {max_delay:.2f}s")
+
+        for i, (state_dict, client_loss, _) in zip(selected_clients, results):
+            client_weights.append(state_dict)
+            training_losses[i].extend(client_loss)
+
+        for i in set(range(len(clients_models))) - set(selected_clients):
+            training_losses[i].append(None)
+
+        # Aggregate weights
+        if aggregation_method == 'weighted_average':
+            total_samples = sum(len(clients_train_loaders[i].dataset) for i in selected_clients)
+            new_server_state_dict = {key: torch.zeros_like(value) for key, value in client_weights[0].items()}
+
+            for key in new_server_state_dict:
+                for i, client_weight in zip(selected_clients, client_weights):
+                    weight_factor = len(clients_train_loaders[i].dataset) / total_samples
+                    new_server_state_dict[key] += client_weight[key] * weight_factor
+
+        server_model.load_state_dict(new_server_state_dict)
+        server_scheduler.step()
+        save_all_models(clients_models, server_model, round_num, save_dir)
+
+        # Compute server loss using test data
+        server_model.eval()
+        total_loss = 0
+        total_samples = 0
+
+        with torch.no_grad():
+            for test_loader in clients_test_loaders:
+                for batch in test_loader:
+                    inputs, targets = batch
+                    inputs, targets = inputs.to(device), targets.to(device)
+                    outputs = server_model(inputs)
+                    batch_loss = loss_fn(outputs, targets) if loss_fn else F.mse_loss(outputs, targets)
+                    total_loss += batch_loss.item() * len(targets)
+                    total_samples += len(targets)
+
+        avg_server_loss = total_loss / total_samples if total_samples > 0 else None
+        server_losses_per_round.append(avg_server_loss)
+        print(f"Server Model Loss (Round {round_num + 1}): {avg_server_loss:.4f}")
+
+    # Save server model losses as a numpy array
+    np.save(f"{save_dir}/server_model_losses.npy", np.array(server_losses_per_round))
+
+    return server_model, training_losses, selected_clients_by_round, execution_times_by_round, server_losses_per_round
+
+"""
 
 
 
