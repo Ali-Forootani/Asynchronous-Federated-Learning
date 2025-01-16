@@ -191,18 +191,18 @@ combined_array = combine_data(scaled_target_points, scaled_unix_time_array,
 
 # Federated Learning Setup for LSTM Model on Multiple Clients
 
-num_clients = 4  # Number of clients
+num_clients = 6  # Number of clients
 
-max_clients_per_round = 4
+max_clients_per_round = 6
 
 
 
 # Parameters and main function call
-num_rounds = 100
-local_epochs = 20
+num_rounds = 200
+local_epochs = 5
 lr = 1e-4
-accumulation_steps = 3
-early_stopping_patience = 3
+accumulation_steps = 1
+early_stopping_patience = 30
 aggregation_method = "weighted_average"
 strong_convexity_param = 0.000
 
@@ -218,7 +218,7 @@ hidden_features = 32
 hidden_layers = 3  # Number of LSTM layers
 output_size = 1  # Number of output features
 learning_rate = 1e-3
-num_epochs = 5
+num_epochs = local_epochs 
 
 # Initialize lists to store client-specific models, optimizers, etc.
 clients_models = []
@@ -250,7 +250,7 @@ for i, (client_coords, ith_client_data) in enumerate(client_data):
     # Prepare data for this client (seq length, randomize the test/train split)
     client_instance = LSTMDataPreparationFL(client_coords, ith_client_data)
     (x_train_seq, u_train_seq, train_loader,
-    test_loader) = client_instance.prepare_data_random(test_data_size=0.99)
+    test_loader) = client_instance.prepare_data_random(test_data_size=0.988)
 
     # Save the data loaders and labels for later use in training
     clients_train_loaders.append(train_loader)
