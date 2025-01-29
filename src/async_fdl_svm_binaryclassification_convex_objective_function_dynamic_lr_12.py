@@ -214,7 +214,7 @@ async def main_binary_classification():
 
 # Initialize dataset, models, and loaders
 num_clients = 10
-num_samples = 4000
+num_samples = 2000
 input_dim = 10
 batch_size = 32
 

@@ -178,7 +178,9 @@ def plot_and_save(array, filename_prefix, title, xlabel, ylabel, log_scale=False
 """
 
 def plot_and_save(array, filename_prefix, title, xlabel, ylabel, log_scale=False):
-    filename_base = f"{filename_prefix}_clients_{num_clients}_epochs_{local_epochs}_updates_{total_updates}"
+    #filename_base = f"{filename_prefix}_clients_{num_clients}_epochs_{local_epochs}_updates_{total_updates}"
+    filename_base = f"{filename_prefix}_clients_{num_clients}_epochs_{local_epochs}_updates_{total_updates}_clientfraction_{client_fraction}_gamma_0{gamma_0}_num_samples{num_samples}"
+    
     np.save(os.path.join(save_dir, f"{filename_base}.npy"), np.array(array))
     
     plt.figure(figsize=(8, 6))
@@ -208,6 +210,9 @@ def plot_and_save(array, filename_prefix, title, xlabel, ylabel, log_scale=False
 
 def plot_client_participation(selected_clients_by_round):
     filename = f"client_participation_clients_{num_clients}_epochs_{local_epochs}_updates_{total_updates}_clientfraction_{client_fraction}_gamma_0{gamma_0}_local_epochs{local_epochs}.png"
+    
+    #f"{filename_prefix}_clients_{num_clients}_epochs_{local_epochs}_updates_{total_updates}_clientfraction_{client_fraction}_gamma_0{gamma_0}_num_samples{num_samples}"
+    
     plt.figure(figsize=(10, 6))
     for round_num, selected_clients in enumerate(selected_clients_by_round):
         plt.scatter([round_num] * len(selected_clients), selected_clients, alpha=0.7)
@@ -235,7 +240,7 @@ async def main():
 
 # Initialize dataset, models, and loaders
 num_clients = 10
-num_samples = 1000
+num_samples = 2000
 input_dim = 10
 batch_size = 32
 
@@ -245,11 +250,11 @@ clients_models = [LinearRegressionModel(input_dim) for _ in range(num_clients)]
 server_model = LinearRegressionModel(input_dim)
 
 # Hyperparameters
-total_updates = 2000
+total_updates = 3600
 local_epochs = 50
 gamma_0 = 0.001
 alpha = 0.01
-client_fraction = 0.5
+client_fraction = 0.9
 
 # Run federated learning
 asyncio.run(main())
