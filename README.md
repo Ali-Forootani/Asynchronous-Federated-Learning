@@ -45,14 +45,29 @@ To address these challenges, this project proposes an Asynchronous Federated Lea
    pip install -r requirements.txt
    ```
 
-### Usage
+### Usage For Strongly Convex Objective Function
+
+1. Run the training script for \afl~algorithm:
+   ```bash
+   python async_fdl_logistic_regression_convex_objective_function_dynamic_lr_12_device_fixed_energy_proxy.py
+   python async_fdl_logistic_regression_convex_objective_function_dynamic_lr_12_device_fixed.py
+   python async_fdl_svm_binaryclassification_convex_objective_function_dynamic_lr_12.py
+   ```
+2. Evaluate the trained model on test data.The simulation results will be saved in `federated_learning_results` directory and then one can run
+   ```bash
+   regression_training_loss_plots.py
+   regression_wall_clock_energy_proxy.py
+   synchronous_training_loss_plots.py
+   synchronous_svm_training_loss_plots.py
+   training_loss_plots.py
+   ```
+
+### Usage For General Objective Functions
+
 1. Prepare the CMIP6 climate dataset and partition it for federated learning.
 2. Run the training script for \afl~algorithm:
    ```bash
-   python training_wind_psr_lstm_fl_async_strictly_convex_random_selection.py
-   python async_fdl_logistic_regression_convex_objective_function_dynamic_lr_12_device_fixed_energy_proxy.py
-   python async_fdl_logistic_regression_convex_objective_function_dynamic_lr_12_device_fixed.py
-   python 
+   [python training_wind_psr_lstm_fl_async_strictly_convex_random_selection.py] *this file is for extra simulation*
    ```
 3. Evaluate the trained model on test data.
 
