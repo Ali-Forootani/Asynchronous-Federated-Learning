@@ -88,13 +88,11 @@ To address these challenges, this project proposes an Asynchronous Federated Lea
 ## Citation
 If you use this code or method in your research, please cite the associated paper:
 ```bibtex
-@article{your_afl_paper,
+@article{forootani2024asynchronous,
   title={Asynchronous Federated Learning: A Scalable Approach for Decentralized Machine Learning},
-  author={Your Name and Collaborators},
-  journal={Your Journal},
-  year={2024},
-  volume={XX},
-  pages={XXX-XXX}
+  author={Forootani, Ali and Iervolino, Raffaele},
+  journal={arXiv preprint arXiv:2412.17723},
+  year={2024}
 }
 ```
 
