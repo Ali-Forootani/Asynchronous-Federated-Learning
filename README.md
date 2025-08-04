@@ -50,6 +50,9 @@ To address these challenges, this project proposes an Asynchronous Federated Lea
 2. Run the training script for \afl~algorithm:
    ```bash
    python training_wind_psr_lstm_fl_async_strictly_convex_random_selection.py
+   python async_fdl_logistic_regression_convex_objective_function_dynamic_lr_12_device_fixed_energy_proxy.py
+   python async_fdl_logistic_regression_convex_objective_function_dynamic_lr_12_device_fixed.py
+   python 
    ```
 3. Evaluate the trained model on test data.
 
